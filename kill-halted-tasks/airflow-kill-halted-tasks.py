@@ -24,7 +24,7 @@ except ImportError:
     now = datetime.utcnow
 
 DAG_ID = os.path.basename(__file__).replace(".pyc", "").replace(".py", "")  # airflow-kill-halted-tasks
-START_DATE = now() - timedelta(minutes=1)
+START_DATE = now() - timedelta(hours=10)
 SCHEDULE_INTERVAL = "@hourly"           # How often to Run. @daily - Once a day at Midnight. @hourly - Once an Hour.
 DAG_OWNER_NAME = "operations"           # Who is listed as the owner of this DAG in the Airflow Web Server
 ALERT_EMAIL_ADDRESSES = []              # List of email address to send email alerts to if this job fails
@@ -261,6 +261,7 @@ def kill_halted_tasks_function(**context):
     logging.info("")
     logging.info("Finished Running Cleanup Process")
 
+
 kill_halted_tasks_op = PythonOperator(
     task_id='kill_halted_tasks',
     python_callable=kill_halted_tasks_function,
@@ -297,12 +298,12 @@ def branch_function(**context):
     logging.info("Opting to skip sending an email since no processes were killed")
     return False  # False = short circuit the dag and don't execute downstream tasks
 
+
 email_or_not_branch = ShortCircuitOperator(
     task_id="email_or_not_branch",
     python_callable=branch_function,
     provide_context=True,
     dag=dag)
-
 
 
 send_processes_killed_email = EmailOperator(

@@ -26,7 +26,7 @@ except ImportError:
     now = datetime.utcnow
 
 DAG_ID = os.path.basename(__file__).replace(".pyc", "").replace(".py", "")  # airflow-db-cleanup
-START_DATE = now() - timedelta(minutes=1)
+START_DATE = now() - timedelta(hours=10)
 SCHEDULE_INTERVAL = "@daily"            # How often to Run. @daily - Once a day at Midnight (UTC)
 DAG_OWNER_NAME = "operations"           # Who is listed as the owner of this DAG in the Airflow Web Server
 ALERT_EMAIL_ADDRESSES = []              # List of email address to send email alerts to if this job fails
@@ -35,11 +35,11 @@ ENABLE_DELETE = True                    # Whether the job should delete the db e
 DATABASE_OBJECTS = [                    # List of all the objects that will be deleted. Comment out the DB objects you want to skip.
     {"airflow_db_model": DagRun, "age_check_column": DagRun.execution_date, "dag_id": DagRun.dag_id, "keep_last_run": True},
     {"airflow_db_model": TaskInstance, "age_check_column": TaskInstance.execution_date, "dag_id": TaskInstance.dag_id, "keep_last_run": False},
-    {"airflow_db_model": Log, "age_check_column": Log.dttm, "dag_id": Log.dag_id,"keep_last_run": False},
-    {"airflow_db_model": XCom, "age_check_column": XCom.execution_date, "dag_id": XCom.dag_id,"keep_last_run": False},
-    {"airflow_db_model": BaseJob, "age_check_column": BaseJob.latest_heartbeat, "dag_id": BaseJob.dag_id,"keep_last_run": False},
-    {"airflow_db_model": SlaMiss, "age_check_column": SlaMiss.execution_date, "dag_id": SlaMiss.dag_id,"keep_last_run": False},
-    {"airflow_db_model": DagModel, "age_check_column": DagModel.last_scheduler_run, "dag_id": DagModel.dag_id,"keep_last_run": False},
+    {"airflow_db_model": Log, "age_check_column": Log.dttm, "dag_id": Log.dag_id, "keep_last_run": False},
+    {"airflow_db_model": XCom, "age_check_column": XCom.execution_date, "dag_id": XCom.dag_id, "keep_last_run": False},
+    {"airflow_db_model": BaseJob, "age_check_column": BaseJob.latest_heartbeat, "dag_id": BaseJob.dag_id, "keep_last_run": False},
+    {"airflow_db_model": SlaMiss, "age_check_column": SlaMiss.execution_date, "dag_id": SlaMiss.dag_id, "keep_last_run": False},
+    {"airflow_db_model": DagModel, "age_check_column": DagModel.last_scheduler_run, "dag_id": DagModel.dag_id, "keep_last_run": False},
 ]
 
 session = settings.Session()
@@ -56,6 +56,7 @@ default_args = {
 
 dag = DAG(DAG_ID, default_args=default_args, schedule_interval=SCHEDULE_INTERVAL, start_date=START_DATE)
 dag.doc_md = __doc__
+
 
 def print_configuration_function(**context):
     logging.info("Loading Configurations...")
@@ -82,6 +83,7 @@ def print_configuration_function(**context):
     logging.info("Setting max_execution_date to XCom for Downstream Processes")
     context["ti"].xcom_push(key="max_date", value=max_date.isoformat())
 
+
 print_configuration = PythonOperator(
     task_id='print_configuration',
     python_callable=print_configuration_function,
@@ -98,7 +100,7 @@ def cleanup_function(**context):
     airflow_db_model = context["params"].get("airflow_db_model")
     age_check_column = context["params"].get("age_check_column")
     keep_last_run = context["params"].get("keep_last_run")
-    dag_id = context["params"].get( "dag_id" )
+    dag_id = context["params"].get( "dag_id")
 
     logging.info("Configurations:")
     logging.info("max_date:                 " + str(max_date))
@@ -121,7 +123,7 @@ def cleanup_function(**context):
 
     entries_to_delete = query.all()
 
-    logging.info("Query : " +  str(query))
+    logging.info("Query : " + str(query))
     logging.info("Process will be Deleting the following " + str(airflow_db_model.__name__) + "(s):")
     for entry in entries_to_delete:
         logging.info("\tEntry: " + str(entry) + ", Date: " + str(entry.__dict__[str(age_check_column).split(".")[1]]))
@@ -138,6 +140,7 @@ def cleanup_function(**context):
         logging.warn("You're opted to skip deleting the db entries!!!")
 
     logging.info("Finished Running Cleanup Process")
+
 
 for db_object in DATABASE_OBJECTS:
 

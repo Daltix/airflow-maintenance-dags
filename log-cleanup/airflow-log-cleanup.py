@@ -18,7 +18,7 @@ except ImportError:
     now = datetime.utcnow
 
 DAG_ID = os.path.basename(__file__).replace(".pyc", "").replace(".py", "")  # airflow-log-cleanup
-START_DATE = now() - timedelta(minutes=1)
+START_DATE = now() - timedelta(hours=10)
 BASE_LOG_FOLDER = conf.get("core", "BASE_LOG_FOLDER")
 SCHEDULE_INTERVAL = "@daily"        # How often to Run. @daily - Once a day at Midnight
 DAG_OWNER_NAME = "operations"       # Who is listed as the owner of this DAG in the Airflow Web Server
@@ -74,9 +74,9 @@ echo ""
 echo "Running Cleanup Process..."
 if [ $TYPE == file ];
 then
-    FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type f -mtime +${MAX_LOG_AGE_IN_DAYS}"
+    FIND_STATEMENT="/usr/bin/find ${BASE_LOG_FOLDER}/*/* -type f -mtime +${MAX_LOG_AGE_IN_DAYS}"
 else
-    FIND_STATEMENT="find ${BASE_LOG_FOLDER}/*/* -type d -empty "
+    FIND_STATEMENT="/usr/bin/find ${BASE_LOG_FOLDER}/*/* -type d -empty "
 fi
 echo "Executing Find Statement: ${FIND_STATEMENT}"
 FILES_MARKED_FOR_DELETE=`eval ${FIND_STATEMENT}`
@@ -99,7 +99,7 @@ else
 fi
 echo "Finished Running Cleanup Process"
 """
-i=0
+i = 0
 for log_cleanup_id in range(1, NUMBER_OF_WORKERS + 1):
 
     for directory in DIRECTORIES_TO_DELETE:
@@ -114,7 +114,7 @@ for log_cleanup_id in range(1, NUMBER_OF_WORKERS + 1):
             task_id='log_cleanup_directory_' + str(i),
             bash_command=log_cleanup,
             provide_context=True,
-            params={"directory": str(directory), "type":"directory"},
+            params={"directory": str(directory), "type": "directory"},
             dag=dag)
         i = i + 1
 
